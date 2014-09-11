@@ -8,13 +8,18 @@ var plugins = require("gulp-load-plugins")({
 });
 
 var changeEvent = function(evt) {
-    gutil.log('File', gutil.colors.cyan(evt.path.replace(new RegExp('/.*(?=/' + basePaths.src + ')/'), '')), 'was', gutil.colors.magenta(evt.type));
+    gutil.log('File', gutil.colors.cyan(evt.path), 'was', gutil.colors.magenta(evt.type));
 };
 
 var paths = {
-  styles: {
+  scss: {
     path: 'assets/sass/',
     src: 'assets/sass/**/*.scss',
+    dest: 'assets/css/'
+  },
+  less: {
+    path: 'assets/less/',
+    src: 'assets/less/**/*.less',
     dest: 'assets/css/'
   },
   scripts: {
@@ -27,8 +32,8 @@ var paths = {
   }
 }
 
-gulp.task('css', function(){
-  var sassFiles = gulp.src(paths.styles.src)
+gulp.task('scss', function(){
+  var sassFiles = gulp.src(paths.scss.src)
       .pipe(plugins.rubySass({
         style: 'compressed', sourcemap: false, precision: 2
       }))
@@ -42,7 +47,25 @@ gulp.task('css', function(){
         .pipe(plugins.combineMediaQueries({log: true}))
         .pipe(plugins.cssmin())
         .pipe(plugins.size())
-        .pipe(gulp.dest(paths.styles.dest));
+        .pipe(gulp.dest(paths.scss.dest));
+});
+
+gulp.task('less', function(){
+  var lessFiles = gulp.src(paths.less.src)
+      .pipe(plugins.less({
+        compress: true
+      }))
+      .on('error', function(err){
+        new gutil.PluginError('CSS', err, {showStack: true});
+      });
+
+    return es.concat(gulp.src(''), lessFiles)
+        .pipe(plugins.concat('style.min.css'))
+        .pipe(plugins.autoprefixer('last 2 version', 'safari 5', 'ie 8', 'ie 9', 'opera 12.1', 'ios 6', 'android 4'))
+        .pipe(plugins.combineMediaQueries({log: true}))
+        .pipe(plugins.cssmin())
+        .pipe(plugins.size())
+        .pipe(gulp.dest(paths.less.dest));
 });
 
 gulp.task('scripts', function(){
@@ -61,11 +84,21 @@ gulp.task('sprite', function () {
       imgPath: paths.sprite.dest + 'sprite.png'
   }));
   spriteData.img.pipe(gulp.dest(paths.sprite.dest));
-  spriteData.css.pipe(gulp.dest(paths.styles.path));
+  spriteData.css.pipe(gulp.dest(paths.scss.path));
 });
 
-gulp.task('watch', ['sprite', 'css', 'scripts'], function(){
-  gulp.watch(paths.styles.src, ['css']).on('change', function(evt) {
+gulp.task('sprite_less', function () {
+  var spriteData = gulp.src(paths.sprite.src).pipe(plugins.spritesmith({
+      imgName: 'sprite.png',
+      cssName: '_sprite.less',
+      imgPath: paths.sprite.dest + 'sprite.png'
+  }));
+  spriteData.img.pipe(gulp.dest(paths.sprite.dest));
+  spriteData.css.pipe(gulp.dest(paths.scss.path));
+});
+
+gulp.task('watch', ['sprite', 'scss', 'scripts'], function(){
+  gulp.watch(paths.scss.src, ['scss']).on('change', function(evt) {
     changeEvent(evt);
   });
   gulp.watch(paths.scripts.src, ['scripts']).on('change', function(evt) {
@@ -74,4 +107,4 @@ gulp.task('watch', ['sprite', 'css', 'scripts'], function(){
 });
 
 
-gulp.task('default', ['css', 'scripts', 'watch']);
+gulp.task('default', ['scss', 'scripts', 'watch']);
